@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <style type="text/css">
+        body {
+            background-color: lightslategray;
+        }
+
+        .headPic {
+            margin: 0px;
+            width: 20%;
+            height: 20%;
+            border-radius: 50%;
+        }
+
+        .button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 16px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+        }
+
+        .button1 {
+            background-color: white;
+            color: black;
+            border: 2px solid #4CAF50;
+        }
+
+        .button1:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .button_logout {
+            background-color: indianred; /* Green */
+            border: none;
+            color: white;
+            padding: 16px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+        }
+
+        .button2 {
+            background-color: white;
+            color: black;
+            border: 2px solid indianred;
+        }
+
+        .button2:hover {
+            background-color: indianred;
+            color: white;
+        }
+
+        h1 {
+            font-size: 40px;
+            color: aliceblue;
+            text-shadow: 2px 2px 2px darkgrey;
+        }
+    </style>
+</head>
+<body>
+<br>
+<br>
+<div style="text-align: center">
+    <h1><%= user.displayName %>的訂閱項目</h1>
+</div>
+<br>
+<br>
+<div style="text-align: center">
+    <button type="button" class="button button1" onclick="checkAll(false)">我全不d / cancel all</button>
+    <button type="button" class="button button1" onclick="checkAll(true)">我就臭dd / select all</button>
+</div>
+<br>
+<br>
+<form method="post" action="<%= path || '' %>/select/">
+    <input type="hidden" name="id" value="<%= user.id %>">
+    <input type="hidden" name="sub" value="empty">
+    <input type="hidden" name="sub" value="empty">
+    <div style="text-align: center;">
+        <% for (var i = 0; i < list.length; i++) { %>
+            <% const subCheck = user.sub.some((e) => e === list[i].username) %>
+            <% if (subCheck) { %>
+                <label for="headPic_<%= i %>">
+                    <img class="headPic" alt="<%= list[i].name %>"
+                         src="<%= path || '' %>/image/head/<%= list[i].name %>.png"
+                         onclick="checkClick(<%= i %>,'<%= list[i].name %>');">
+                </label>
+                <input class="selectHead" type="checkbox" style="display:none" name="sub"
+                       value="<%= list[i].username %>"
+                       id="headPic_<%= i %>"
+                       checked="checked">
+            <% } else { %>
+                <label for="headPic_<%= i %>">
+                    <img style="opacity: 0.3" class="headPic" alt="<%= list[i].name %>"
+                         src="<%= path || '' %>/image/head/<%= list[i].name %>.png"
+                         onclick="checkClick(<%= i %>,'<%= list[i].name %>');">
+                </label>
+                <input class="selectHead" type="checkbox" style="display:none" name="sub"
+                       value="<%= list[i].username %>"
+                       id="headPic_<%= i %>">
+            <% } %>
+        <% } %>
+    </div>
+    <br>
+    <br>
+    <div style="text-align: center">
+        <h2>是否靜音 / Notify Mute</h2>
+        <% if(user.mute === 'true') { %>
+            <input type="radio" name="mute" value="true" checked="checked"> 是/Yes
+            <input type="radio" name="mute" value="false"> 否/No
+        <% } else { %>
+            <input type="radio" name="mute" value="true"> 是/Yes
+            <input type="radio" name="mute" value="false" checked="checked"> 否/No
+        <% } %>
+    </div>
+    <br>
+    <div style="text-align: center">
+        <h2>是否於訊息內顯示該推網址 / Show Tweet URL in Notify</h2>
+        <% if (user.showUrl === 'true') { %>
+            <input type="radio" name="showUrl" value="true" checked="checked">是 / Yes
+            <input type="radio" name="showUrl" value="false">否 / No
+        <% } else { %>
+            <input type="radio" name="showUrl" value="true">是 / Yes
+            <input type="radio" name="showUrl" value="false" checked="checked">否 / No
+        <% } %>
+    </div>
+    <br>
+    <br>
+    <div style="text-align: center">
+        <button class="button button1" type="submit">確定送出</button>
+    </div>
+</form>
+<br>
+<br>
+<br>
+<br>
+<div id="logout_body" style="display:none; text-align: center">
+    <button type="button" class="button_logout button2" onclick="logout()">登出</button>
+</div>
+</body>
+</html>

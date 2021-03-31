@@ -1,0 +1,28 @@
+{
+  "name": "holo_dd_notify",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Server.js",
+  "scripts": {
+    "start": "node Server.js",
+    "lint": "eslint ./router/*.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@line/bot-sdk": "^7.2.0",
+    "body-parser": "^1.19.0",
+    "dotenv": "^8.2.0",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "firebase-admin": "^9.5.0",
+    "moment": "^2.29.1",
+    "needle": "^2.6.0",
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.22.0",
+    "eslint-config-google": "^0.14.0"
+  }
+}

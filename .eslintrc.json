@@ -1,0 +1,17 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true
+    },
+    "extends": [
+        "google"
+    ],
+    "parserOptions": {
+        "ecmaVersion": 10
+    },
+    "rules": {
+        "indent": [2, 4],
+        "max-len": ["off", { "code": 200 }]
+    }
+}
