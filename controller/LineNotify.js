@@ -65,20 +65,27 @@ function sendNotifyMessage(token, body) {
 /**
  * send message to server notify
  * @param {String} message
+ * @return {Promise<String>}
  */
 function sendServerStatus(message) {
-    fetch(notifyUrl, {
-        method: 'post',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Bearer ${process.env.server_notify_token}`,
-        },
-        body: message,
+    return new Promise((resolve, reject) => {
+        fetch(notifyUrl, {
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Bearer ${process.env.server_notify_token}`,
+            },
+            body: message,
+        })
+            .then((res)=>res.json())
+            .then((json)=>{
+                if(json.status !== 200){
+                    resolve(false);
+                }else {
+                    resolve(true);
+                }
+            })
     })
-        .then((res)=>res.json())
-        .then((json)=>{
-            console.log(`Server status message: ${JSON.stringify(json)}`);
-        });
 }
 
 module.exports = {

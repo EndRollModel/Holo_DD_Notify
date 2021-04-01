@@ -105,7 +105,7 @@ function streamConnect(retryAttempt) {
         },
         timeout: 20000,
     });
-    stream.on('data', (data) => {
+    stream.on('data', async (data) => {
         try {
             const json = JSON.parse(data);
             console.log(JSON.stringify(json));
@@ -123,15 +123,15 @@ function streamConnect(retryAttempt) {
             if (data.detail === 'This stream is currently at the maximum allowed connection limit.') {
                 // maximum allowed connection
                 console.log(`Error : ${data.detail}`);
-                notify.sendServerStatus(`Server Stop Message : This stream is currently at the maximum allowed connection limit.`);
+                await notify.sendServerStatus(`Server Stop Message : This stream is currently at the maximum allowed connection limit.`);
                 process.exit(1);
             } else if (data.hasOwnProperty('errors')) {
                 // has error message
                 try {
                     const dataMsg = JSON.stringify(data);
-                    notify.sendServerStatus(`Server Stop Message : ${dataMsg}`);
+                    await notify.sendServerStatus(`Server Stop Message : ${dataMsg}`);
                 } catch (e) {
-                    notify.sendServerStatus(`Server Stop Message : ${data}`);
+                    await notify.sendServerStatus(`Server Stop Message : ${data}`);
                 }
                 process.exit(1);
             } else {
@@ -139,8 +139,9 @@ function streamConnect(retryAttempt) {
                 clearTimeout(delayfunc);
                 delayfunc = setTimeout(()=>{
                     console.log(`I'm Dead ( 25 second not any call this )`);
-                    notify.sendServerStatus(`I'm Dead ( 25 second not any call this )`);
-                    process.exit(2);
+                    notify.sendServerStatus(`I'm Dead ( 25 second not any call this )`).then((status)=>{
+                        process.exit(2);
+                    });
                 }, delayTime);
                 writeAliveLog(`I'm still alive`);
             }
@@ -150,15 +151,18 @@ function streamConnect(retryAttempt) {
     }).on('err', (error) => {
         if (error.code !== 'ECONNRESET') {
             console.log(`stream error :ECONNRESET ${error.code}`);
-            process.exit(1);
+            notify.sendServerStatus(`stream error :ECONNRESET ${error.code}`).then((status)=>{
+                process.exit(1);
+            });
         } else {
             // This reconnection logic will attempt to reconnect when a disconnection is detected.
             // To avoid rate limits, this logic implements exponential backoff, so the wait time
             // will increase if the client cannot reconnect to the stream.
             setTimeout(() => {
                 console.log('A connection error occurred. Reconnecting...');
-                notify.sendServerStatus('A connection error occurred. Reconnecting...');
-                streamConnect(++retryAttempt);
+                notify.sendServerStatus('A connection error occurred. Reconnecting...').then((status)=>{
+                    streamConnect(++retryAttempt);
+                });
             }, 2 ** retryAttempt);
         }
     });
