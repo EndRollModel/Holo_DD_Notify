@@ -68,6 +68,8 @@ function sendNotifyMessage(token, body) {
  * @return {Promise<String>}
  */
 function sendServerStatus(message) {
+    const param = new URLSearchParams();
+    param.append('message', message);
     return new Promise((resolve, reject) => {
         fetch(notifyUrl, {
             method: 'post',
@@ -75,7 +77,7 @@ function sendServerStatus(message) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Authorization': `Bearer ${process.env.server_notify_token}`,
             },
-            body: message,
+            body: param,
         })
             .then((res)=>res.json())
             .then((json)=>{
