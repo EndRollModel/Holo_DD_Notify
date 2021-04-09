@@ -12,10 +12,8 @@ const hostPath = process.env.hostpath;
 const app = express();
 app.use(bodyParser.urlencoded({extended: false}));
 
-// delay start 25s
-setTimeout(()=>{
-    tweetStream.streamConnect(0);
-}, 25000);
+// start filter
+tweetStream.streamFConnect(0);
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');

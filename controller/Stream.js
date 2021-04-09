@@ -1,6 +1,7 @@
 process.chdir(__dirname);
 const fetch = require('node-fetch');
 const needle = require('needle');
+const axios = require('axios').default;
 const {formatMessage} = require('./LineNotify');
 const fireDataBase = require('../controller/FirebaseRTD');
 const token = `Bearer ${process.env.twitter_auth}`;
@@ -25,27 +26,27 @@ function startSampleStream(query = null) {
     })
         .then((res) => {
             res.body.on('data', (data) => {
-                try {
-                    const formatBody = Buffer.from(data).toString('utf-8');
-                    if (formatBody !== '\r\n') {
-                        const body = JSON.parse(formatBody);
-                        if (query != null && Array.isArray(query)) {
-                            query.map((elem) => {
-                                if (body.data.text.indexOf(elem) > -1) {
-                                    const filterBody = formatFilter(elem);
-                                    console.log(JSON.stringify(filterBody));
-                                }
-                            });
-                        } else {
-                            const filterBody = formatFilter(body);
-                            console.log(JSON.stringify(filterBody));
+                    try {
+                        const formatBody = Buffer.from(data).toString('utf-8');
+                        if (formatBody !== '\r\n') {
+                            const body = JSON.parse(formatBody);
+                            if (query != null && Array.isArray(query)) {
+                                query.map((elem) => {
+                                    if (body.data.text.indexOf(elem) > -1) {
+                                        const filterBody = formatFilter(elem);
+                                        console.log(JSON.stringify(filterBody));
+                                    }
+                                });
+                            } else {
+                                const filterBody = formatFilter(body);
+                                console.log(JSON.stringify(filterBody));
+                            }
                         }
+                    } catch (e) {
+                        console.log(e.toString());
+                        console.log(Buffer.from(data).toString('utf-8'));
                     }
-                } catch (e) {
-                    console.log(e.toString());
-                    console.log(Buffer.from(data).toString('utf-8'));
-                }
-            },
+                },
             );
         });
 }
@@ -62,39 +63,42 @@ function startFilterStream() {
         timeout: 15000,
     }).then((res) => {
         res.body.on('data', (data) => {
-            try {
-                const formatBody = Buffer.from(data).toString('utf-8');
-                if (formatBody !== '\r\n') { // 固定會傳換行符號
-                    const body = JSON.parse(formatBody);
-                    console.log(JSON.stringify(body));
-                    fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
-                        if (subUser.length > 0) {
-                            const filterBody = formatFilter(body);
-                            subUser.map((token) => {
-                                formatMessage(token, filterBody);
-                            });
-                        }
-                    });
+                try {
+                    const formatBody = Buffer.from(data).toString('utf-8');
+                    if (formatBody !== '\r\n') { // 固定會傳換行符號
+                        const body = JSON.parse(formatBody);
+                        console.log(JSON.stringify(body));
+                        fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
+                            if (subUser.length > 0) {
+                                const filterBody = formatFilter(body);
+                                subUser.map((token) => {
+                                    formatMessage(token, filterBody);
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.log(e.toString());
+                    console.log(Buffer.from(data).toString('utf-8'));
                 }
-            } catch (e) {
-                console.log(e.toString());
-                console.log(Buffer.from(data).toString('utf-8'));
-            }
-        },
+            },
         );
     });
 }
 
 /**
+ * @deprecated
  * twitter official sample
  * @param {number} retryAttempt
  * @return {*}
  */
 function streamConnect(retryAttempt) {
-    console.log('start stream :');
+    notify.sendServerStatus('server start').then((status) => {
+        console.log(`server start : notify send status ${status}`)
+    })
     const delayTime = 25000;
     // set countdown check
-    let delayfunc = setTimeout(()=>{
+    let delayfunc = setTimeout(() => {
         console.log(`I'm dead !`);
     }, delayTime);
 
@@ -136,10 +140,11 @@ function streamConnect(retryAttempt) {
                 process.exit(1);
             } else {
                 // Keep alive signal received. Do nothing.
+                // if 25 sec not call \r\n = dead (official doc : 20 sec)
                 clearTimeout(delayfunc);
-                delayfunc = setTimeout(()=>{
-                    console.log(`I'm Dead ( 25 second not any call this )`);
-                    notify.sendServerStatus(`I'm Dead ( 25 second not any call this )`).then((status)=>{
+                delayfunc = setTimeout(() => {
+                    console.log(`I'm Dead`);
+                    notify.sendServerStatus(`Hi I'm Dead`).then((status) => {
                         process.exit(2);
                     });
                 }, delayTime);
@@ -151,7 +156,7 @@ function streamConnect(retryAttempt) {
     }).on('err', (error) => {
         if (error.code !== 'ECONNRESET') {
             console.log(`stream error :ECONNRESET ${error.code}`);
-            notify.sendServerStatus(`stream error :ECONNRESET ${error.code}`).then((status)=>{
+            notify.sendServerStatus(`stream error :ECONNRESET ${error.code}`).then((status) => {
                 process.exit(1);
             });
         } else {
@@ -160,15 +165,124 @@ function streamConnect(retryAttempt) {
             // will increase if the client cannot reconnect to the stream.
             setTimeout(() => {
                 console.log('A connection error occurred. Reconnecting...');
-                notify.sendServerStatus('A connection error occurred. Reconnecting...').then((status)=>{
+                notify.sendServerStatus('A connection error occurred. Reconnecting...').then((status) => {
                     streamConnect(++retryAttempt);
                 });
             }, 2 ** retryAttempt);
         }
+    }).on('timeout', (type) => {
+        console.log(`timeout: ${type}`);
     });
     return stream;
 }
 
+function streamFConnect(count) {
+    // 連線計算方式 count * (5 * 60000)
+    // 每次進圈增加五分鐘 最高count : 3 (15min)
+    // 第一圈進來為 0 將以五分鐘作為最低標準
+    const reconnectTime = count === 0 ? (5 * 60000) : count * (5 * 60000);
+    notify.sendServerStatus('start request: ').then(()=>{
+        console.log('start request : ');
+    });
+    // check server still alive info
+    let checkTime = 25000;
+    let delayMessage = setTimeout(() => {
+        console.log(`I'm dead !`);
+    }, checkTime);
+    // 改用axios 可以中斷連線 重複連線請求
+    // user axios disconnect / request again
+    const CancelToken = axios.CancelToken;
+    const source = CancelToken.source();
+    axios({
+        cancelToken: source.token,
+        url: filterUrl,
+        method: "get",
+        headers: {
+            'User-Agent': 'v2FilterStreamJS',
+            'Authorization': token,
+        },
+        timeout: 20000,
+        responseType: "stream",
+    }).then(function (res) {
+        console.log(JSON.stringify(res.headers)); // this req header information
+        res.data.on('data', async (data) => {
+            // const messageData = Buffer.from(data).toString('utf-8');
+            try {
+                const json = JSON.parse(data);
+                fireDataBase.searchSubItem(json.includes.users[0].username).then((subUser) => {
+                    if (subUser.length > 0) {
+                        const filterBody = formatFilter(json);
+                        subUser.map((data) => {
+                            formatMessage(data, filterBody);
+                        });
+                    }
+                });
+                console.log(JSON.stringify(json));
+            } catch (e) {
+                // maximum allowed connection
+                if (data.detail === 'This stream is currently at the maximum allowed connection limit.') {
+                    // log
+                    // `Server Stop Message : This stream is currently at the maximum allowed connection limit.`
+                    notify.sendServerStatus(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`).then(()=>{
+                        source.cancel('maximum');
+                    });
+                    console.log(`Error : ${data.detail}`);
+                    // disconnect
+                } else if (data.hasOwnProperty('errors')) {
+                    // other error
+                    try {
+                        const dataMsg = JSON.stringify(data);
+                        await notify.sendServerStatus(`Server Stop Message : ${dataMsg}`);
+                    } catch (e) {
+                        await notify.sendServerStatus(`Server Stop Message : ${data}`);
+                    }
+                    // log
+                    notify.sendServerStatus(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`).then(() => {
+                        // reconnect
+                        source.cancel('other');
+                    });
+                    console.log(`Error : ${e.toString()}`);
+                } else {
+                    // Keep alive signal received. Do nothing.
+                    // if 25 sec not call \r\n = dead (official doc : 20 sec)
+                    clearTimeout(delayMessage);
+                    delayMessage = setTimeout(() => {
+                        notify.sendServerStatus(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`).then((status) => {
+                            source.cancel('timeout');
+                        });
+                    }, checkTime);
+                    writeAliveLog(`I'm still alive`);
+                }
+            }
+        })
+    }).catch(function (err) {
+        if (axios.isCancel(err)) {
+            // reconnect
+            switch (err.message) {
+                case 'maximum':
+                    if (count < 3) {
+                        setTimeout(() => {
+                            streamFConnect(++count);
+                        }, reconnectTime)
+                    } else {
+                        setTimeout(() => {
+                            streamFConnect(count);
+                        }, reconnectTime)
+                    }
+                    break;
+                case 'timeout':
+                case 'other':
+                    setTimeout(() => {
+                        streamFConnect(count);
+                    }, reconnectTime)
+                    break;
+            }
+        }
+        console.log(`axios error :${err}`);
+        console.log(`axios error :${JSON.stringify(err)}`);
+    }).then(() => {
+    })
+}
 
 /**
  * Filter data Format
@@ -257,4 +371,5 @@ module.exports = {
     startSampleStream,
     startFilterStream,
     streamConnect,
+    streamFConnect,
 };
