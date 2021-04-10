@@ -26,27 +26,27 @@ function startSampleStream(query = null) {
     })
         .then((res) => {
             res.body.on('data', (data) => {
-                    try {
-                        const formatBody = Buffer.from(data).toString('utf-8');
-                        if (formatBody !== '\r\n') {
-                            const body = JSON.parse(formatBody);
-                            if (query != null && Array.isArray(query)) {
-                                query.map((elem) => {
-                                    if (body.data.text.indexOf(elem) > -1) {
-                                        const filterBody = formatFilter(elem);
-                                        console.log(JSON.stringify(filterBody));
-                                    }
-                                });
-                            } else {
-                                const filterBody = formatFilter(body);
-                                console.log(JSON.stringify(filterBody));
-                            }
+                try {
+                    const formatBody = Buffer.from(data).toString('utf-8');
+                    if (formatBody !== '\r\n') {
+                        const body = JSON.parse(formatBody);
+                        if (query != null && Array.isArray(query)) {
+                            query.map((elem) => {
+                                if (body.data.text.indexOf(elem) > -1) {
+                                    const filterBody = formatFilter(elem);
+                                    console.log(JSON.stringify(filterBody));
+                                }
+                            });
+                        } else {
+                            const filterBody = formatFilter(body);
+                            console.log(JSON.stringify(filterBody));
                         }
-                    } catch (e) {
-                        console.log(e.toString());
-                        console.log(Buffer.from(data).toString('utf-8'));
                     }
-                },
+                } catch (e) {
+                    console.log(e.toString());
+                    console.log(Buffer.from(data).toString('utf-8'));
+                }
+            },
             );
         });
 }
@@ -63,25 +63,25 @@ function startFilterStream() {
         timeout: 15000,
     }).then((res) => {
         res.body.on('data', (data) => {
-                try {
-                    const formatBody = Buffer.from(data).toString('utf-8');
-                    if (formatBody !== '\r\n') { // 固定會傳換行符號
-                        const body = JSON.parse(formatBody);
-                        console.log(JSON.stringify(body));
-                        fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
-                            if (subUser.length > 0) {
-                                const filterBody = formatFilter(body);
-                                subUser.map((token) => {
-                                    formatMessage(token, filterBody);
-                                });
-                            }
-                        });
-                    }
-                } catch (e) {
-                    console.log(e.toString());
-                    console.log(Buffer.from(data).toString('utf-8'));
+            try {
+                const formatBody = Buffer.from(data).toString('utf-8');
+                if (formatBody !== '\r\n') { // 固定會傳換行符號
+                    const body = JSON.parse(formatBody);
+                    console.log(JSON.stringify(body));
+                    fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
+                        if (subUser.length > 0) {
+                            const filterBody = formatFilter(body);
+                            subUser.map((token) => {
+                                formatMessage(token, filterBody);
+                            });
+                        }
+                    });
                 }
-            },
+            } catch (e) {
+                console.log(e.toString());
+                console.log(Buffer.from(data).toString('utf-8'));
+            }
+        },
         );
     });
 }
@@ -94,8 +94,8 @@ function startFilterStream() {
  */
 function streamConnect(retryAttempt) {
     notify.sendServerStatus('server start').then((status) => {
-        console.log(`server start : notify send status ${status}`)
-    })
+        console.log(`server start : notify send status ${status}`);
+    });
     const delayTime = 25000;
     // set countdown check
     let delayfunc = setTimeout(() => {
@@ -176,6 +176,10 @@ function streamConnect(retryAttempt) {
     return stream;
 }
 
+/**
+ * Filter stream ( axios ver. )
+ * @param {number} count
+ */
 function streamFConnect(count) {
     // 連線計算方式 count * (5 * 60000)
     // 每次進圈增加五分鐘 最高count : 3 (15min)
@@ -185,7 +189,7 @@ function streamFConnect(count) {
         console.log('start request : ');
     });
     // check server still alive info
-    let checkTime = 25000;
+    const checkTime = 25000;
     let delayMessage = setTimeout(() => {
         console.log(`I'm dead !`);
     }, checkTime);
@@ -196,14 +200,14 @@ function streamFConnect(count) {
     axios({
         cancelToken: source.token,
         url: filterUrl,
-        method: "get",
+        method: 'get',
         headers: {
             'User-Agent': 'v2FilterStreamJS',
             'Authorization': token,
         },
         timeout: 20000,
-        responseType: "stream",
-    }).then(function (res) {
+        responseType: 'stream',
+    }).then(function(res) {
         console.log(JSON.stringify(res.headers)); // this req header information
         res.data.on('data', async (data) => {
             // const messageData = Buffer.from(data).toString('utf-8');
@@ -225,6 +229,16 @@ function streamFConnect(count) {
                     // `Server Stop Message : This stream is currently at the maximum allowed connection limit.`
                     notify.sendServerStatus(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`).then(()=>{
                         source.cancel('maximum');
+                        console.log(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`);
+                        if (count < 3) {
+                            setTimeout(() => {
+                                streamFConnect(++count);
+                            }, reconnectTime);
+                        } else {
+                            setTimeout(() => {
+                                streamFConnect(count);
+                            }, reconnectTime);
+                        }
                     });
                     console.log(`Error : ${data.detail}`);
                     // disconnect
@@ -239,7 +253,11 @@ function streamFConnect(count) {
                     // log
                     notify.sendServerStatus(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`).then(() => {
                         // reconnect
+                        console.log(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`);
                         source.cancel('other');
+                        setTimeout(() => {
+                            streamFConnect(count);
+                        }, reconnectTime);
                     });
                     console.log(`Error : ${e.toString()}`);
                 } else {
@@ -248,40 +266,22 @@ function streamFConnect(count) {
                     clearTimeout(delayMessage);
                     delayMessage = setTimeout(() => {
                         notify.sendServerStatus(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`).then((status) => {
+                            console.log(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`);
                             source.cancel('timeout');
+                            setTimeout(() => {
+                                streamFConnect(count);
+                            }, reconnectTime);
                         });
                     }, checkTime);
                     writeAliveLog(`I'm still alive`);
                 }
             }
-        })
-    }).catch(function (err) {
-        if (axios.isCancel(err)) {
-            // reconnect
-            switch (err.message) {
-                case 'maximum':
-                    if (count < 3) {
-                        setTimeout(() => {
-                            streamFConnect(++count);
-                        }, reconnectTime)
-                    } else {
-                        setTimeout(() => {
-                            streamFConnect(count);
-                        }, reconnectTime)
-                    }
-                    break;
-                case 'timeout':
-                case 'other':
-                    setTimeout(() => {
-                        streamFConnect(count);
-                    }, reconnectTime)
-                    break;
-            }
-        }
+        });
+    }).catch(function(err) {
         console.log(`axios error :${err}`);
         console.log(`axios error :${JSON.stringify(err)}`);
     }).then(() => {
-    })
+    });
 }
 
 /**
