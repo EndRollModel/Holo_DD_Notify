@@ -82,6 +82,7 @@ function sendServerStatus(message) {
             .then((res)=>res.json())
             .then((json)=>{
                 if(json.status !== 200){
+                    console.log(`notify send fail : ${JSON.stringify(json)}`);
                     resolve(false);
                 }else {
                     resolve(true);

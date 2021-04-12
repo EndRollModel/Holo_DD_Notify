@@ -26,27 +26,27 @@ function startSampleStream(query = null) {
     })
         .then((res) => {
             res.body.on('data', (data) => {
-                try {
-                    const formatBody = Buffer.from(data).toString('utf-8');
-                    if (formatBody !== '\r\n') {
-                        const body = JSON.parse(formatBody);
-                        if (query != null && Array.isArray(query)) {
-                            query.map((elem) => {
-                                if (body.data.text.indexOf(elem) > -1) {
-                                    const filterBody = formatFilter(elem);
-                                    console.log(JSON.stringify(filterBody));
-                                }
-                            });
-                        } else {
-                            const filterBody = formatFilter(body);
-                            console.log(JSON.stringify(filterBody));
+                    try {
+                        const formatBody = Buffer.from(data).toString('utf-8');
+                        if (formatBody !== '\r\n') {
+                            const body = JSON.parse(formatBody);
+                            if (query != null && Array.isArray(query)) {
+                                query.map((elem) => {
+                                    if (body.data.text.indexOf(elem) > -1) {
+                                        const filterBody = formatFilter(elem);
+                                        console.log(JSON.stringify(filterBody));
+                                    }
+                                });
+                            } else {
+                                const filterBody = formatFilter(body);
+                                console.log(JSON.stringify(filterBody));
+                            }
                         }
+                    } catch (e) {
+                        console.log(e.toString());
+                        console.log(Buffer.from(data).toString('utf-8'));
                     }
-                } catch (e) {
-                    console.log(e.toString());
-                    console.log(Buffer.from(data).toString('utf-8'));
-                }
-            },
+                },
             );
         });
 }
@@ -63,25 +63,25 @@ function startFilterStream() {
         timeout: 15000,
     }).then((res) => {
         res.body.on('data', (data) => {
-            try {
-                const formatBody = Buffer.from(data).toString('utf-8');
-                if (formatBody !== '\r\n') { // 固定會傳換行符號
-                    const body = JSON.parse(formatBody);
-                    console.log(JSON.stringify(body));
-                    fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
-                        if (subUser.length > 0) {
-                            const filterBody = formatFilter(body);
-                            subUser.map((token) => {
-                                formatMessage(token, filterBody);
-                            });
-                        }
-                    });
+                try {
+                    const formatBody = Buffer.from(data).toString('utf-8');
+                    if (formatBody !== '\r\n') { // 固定會傳換行符號
+                        const body = JSON.parse(formatBody);
+                        console.log(JSON.stringify(body));
+                        fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
+                            if (subUser.length > 0) {
+                                const filterBody = formatFilter(body);
+                                subUser.map((token) => {
+                                    formatMessage(token, filterBody);
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.log(e.toString());
+                    console.log(Buffer.from(data).toString('utf-8'));
                 }
-            } catch (e) {
-                console.log(e.toString());
-                console.log(Buffer.from(data).toString('utf-8'));
-            }
-        },
+            },
         );
     });
 }
@@ -185,7 +185,7 @@ function streamFConnect(count) {
     // 每次進圈增加五分鐘 最高count : 3 (15min)
     // 第一圈進來為 0 將以五分鐘作為最低標準
     const reconnectTime = count === 0 ? (5 * 60000) : count * (5 * 60000);
-    notify.sendServerStatus('start request: ').then(()=>{
+    notify.sendServerStatus('start request: ').then(() => {
         console.log('start request : ');
     });
     // check server still alive info
@@ -207,8 +207,9 @@ function streamFConnect(count) {
         },
         timeout: 20000,
         responseType: 'stream',
-    }).then(function(res) {
+    }).then(function (res) {
         console.log(JSON.stringify(res.headers)); // this req header information
+        console.log(res.status);
         res.data.on('data', async (data) => {
             // const messageData = Buffer.from(data).toString('utf-8');
             try {
@@ -223,11 +224,27 @@ function streamFConnect(count) {
                 });
                 console.log(JSON.stringify(json));
             } catch (e) {
-                // maximum allowed connection
-                if (data.detail === 'This stream is currently at the maximum allowed connection limit.') {
-                    // log
+                // Keep alive signal received. Do nothing.
+                // if 25 sec not call \r\n = dead (official doc : 20 sec)
+                clearTimeout(delayMessage);
+                delayMessage = setTimeout(() => {
+                    notify.sendServerStatus(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`).then((status) => {
+                        console.log(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`);
+                        source.cancel('timeout');
+                        setTimeout(() => {
+                            streamFConnect(0);
+                        }, reconnectTime);
+                    });
+                }, checkTime);
+                writeAliveLog(`I'm still alive`);
+            }
+        });
+    }).catch(function (err) {
+            if (err.response) {
+                if (err.response.status === 429) {
+                    // maximum allowed connection
                     // `Server Stop Message : This stream is currently at the maximum allowed connection limit.`
-                    notify.sendServerStatus(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`).then(()=>{
+                    notify.sendServerStatus(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`).then(() => {
                         source.cancel('maximum');
                         console.log(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`);
                         if (count < 3) {
@@ -240,47 +257,27 @@ function streamFConnect(count) {
                             }, reconnectTime);
                         }
                     });
-                    console.log(`Error : ${data.detail}`);
-                    // disconnect
-                } else if (data.hasOwnProperty('errors')) {
-                    // other error
-                    try {
-                        const dataMsg = JSON.stringify(data);
-                        await notify.sendServerStatus(`Server Stop Message : ${dataMsg}`);
-                    } catch (e) {
-                        await notify.sendServerStatus(`Server Stop Message : ${data}`);
-                    }
-                    // log
-                    notify.sendServerStatus(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`).then(() => {
-                        // reconnect
-                        console.log(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`);
-                        source.cancel('other');
-                        setTimeout(() => {
-                            streamFConnect(count);
-                        }, reconnectTime);
-                    });
-                    console.log(`Error : ${e.toString()}`);
+                    console.log(`Error : This stream is currently at the maximum allowed connection limit.`);
                 } else {
-                    // Keep alive signal received. Do nothing.
-                    // if 25 sec not call \r\n = dead (official doc : 20 sec)
-                    clearTimeout(delayMessage);
-                    delayMessage = setTimeout(() => {
-                        notify.sendServerStatus(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`).then((status) => {
-                            console.log(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`);
-                            source.cancel('timeout');
+                    err.response.data.on('data', (data) => {
+                        const errMsg = Buffer.from(data).toString('utf-8');
+                        notify.sendServerStatus(`Server stop : 'other', message : ${errMsg} reconnect time : ${reconnectTime / 1000} sec.`).then(() => {
+                            // reconnect
+                            console.log(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`);
+                            source.cancel('other');
                             setTimeout(() => {
-                                streamFConnect(count);
+                                streamFConnect(0);
                             }, reconnectTime);
                         });
-                    }, checkTime);
-                    writeAliveLog(`I'm still alive`);
+                    });
                 }
+                // console.log(err.response.status);
+                // console.log(err.response.headers);
+            } else {
+                console.log(`axios no response : ${err.toString()}`)
             }
-        });
-    }).catch(function(err) {
-        console.log(`axios error :${err}`);
-        console.log(`axios error :${JSON.stringify(err)}`);
-    }).then(() => {
+        }
+    ).then(() => {
     });
 }
 
