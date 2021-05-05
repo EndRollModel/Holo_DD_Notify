@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const needle = require('needle');
 const axios = require('axios').default;
 const {formatMessage} = require('./LineNotify');
-const fireDataBase = require('../controller/FirebaseRTD');
+const fireDatabase = require('../controller/FirebaseRTD');
 const token = `Bearer ${process.env.twitter_auth}`;
 const {writeAliveLog} = require('../model/Log');
 const rulesUrl = `https://api.twitter.com/2/tweets/search/stream/rules`;
@@ -68,7 +68,7 @@ function startFilterStream() {
                     if (formatBody !== '\r\n') { // 固定會傳換行符號
                         const body = JSON.parse(formatBody);
                         console.log(JSON.stringify(body));
-                        fireDataBase.searchSubItem(body.includes.users[0].username).then((subUser) => {
+                        fireDatabase.searchLocalSubItem(body.includes.users[0].username).then((subUser) => {
                             if (subUser.length > 0) {
                                 const filterBody = formatFilter(body);
                                 subUser.map((token) => {
@@ -115,7 +115,7 @@ function streamConnect(retryAttempt) {
             console.log(JSON.stringify(json));
             // A successful connection resets retry count.
             retryAttempt = 0;
-            fireDataBase.searchSubItem(json.includes.users[0].username).then((subUser) => {
+            fireDatabase.searchLocalSubItem(json.includes.users[0].username).then((subUser) => {
                 if (subUser.length > 0) {
                     const filterBody = formatFilter(json);
                     subUser.map((data) => {
@@ -185,8 +185,8 @@ function streamFConnect(count) {
     // 每次進圈增加五分鐘 最高count : 3 (15min)
     // 第一圈進來為 0 將以五分鐘作為最低標準
     const reconnectTime = count === 0 ? (5 * 60000) : count * (5 * 60000);
-    notify.sendServerStatus('start request: ').then(() => {
-        console.log('start request : ');
+    notify.sendServerStatus('::::: start request :::::').then(() => {
+        console.log('start request to twitter');
     });
     // check server still alive info
     const checkTime = 25000;
@@ -214,7 +214,7 @@ function streamFConnect(count) {
             // const messageData = Buffer.from(data).toString('utf-8');
             try {
                 const json = JSON.parse(data);
-                fireDataBase.searchSubItem(json.includes.users[0].username).then((subUser) => {
+                fireDatabase.searchLocalSubItem(json.includes.users[0].username).then((subUser) => {
                     if (subUser.length > 0) {
                         const filterBody = formatFilter(json);
                         subUser.map((data) => {
@@ -228,7 +228,7 @@ function streamFConnect(count) {
                 // if 25 sec not call \r\n = dead (official doc : 20 sec)
                 clearTimeout(delayMessage);
                 delayMessage = setTimeout(() => {
-                    notify.sendServerStatus(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`).then((status) => {
+                    notify.sendServerStatus(`::::: Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec. :::::`).then((status) => {
                         console.log(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`);
                         source.cancel('timeout');
                         setTimeout(() => {
@@ -244,7 +244,7 @@ function streamFConnect(count) {
                 if (err.response.status === 429) {
                     // maximum allowed connection
                     // `Server Stop Message : This stream is currently at the maximum allowed connection limit.`
-                    notify.sendServerStatus(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`).then(() => {
+                    notify.sendServerStatus(`::::: Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec. :::::`).then(() => {
                         source.cancel('maximum');
                         console.log(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`);
                         if (count < 3) {
@@ -261,7 +261,7 @@ function streamFConnect(count) {
                 } else {
                     err.response.data.on('data', (data) => {
                         const errMsg = Buffer.from(data).toString('utf-8');
-                        notify.sendServerStatus(`Server stop : 'other', message : ${errMsg} reconnect time : ${reconnectTime / 1000} sec.`).then(() => {
+                        notify.sendServerStatus(`::::: Server stop : 'other', message : ${errMsg} reconnect time : ${reconnectTime / 1000} sec. :::::`).then(() => {
                             // reconnect
                             console.log(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`);
                             source.cancel('other');

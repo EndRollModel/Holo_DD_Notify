@@ -24,7 +24,8 @@ router.post('/', async (req, res) => {
     if (req.body.liffid) {
         const userId = req.body.liffid;
         const selectId = crypto.encryptionAes(userId).replace(/[\/+]/g, '').trim();
-        const userInfo = await fireDatabase.searchUser(selectId);
+        // const userInfo = await fireDatabase.searchUser(selectId);
+        const userInfo = await fireDatabase.searchLocalUser(selectId);
         if (userInfo !== '') {
             const html = res.render('select', {
                 title: userId,

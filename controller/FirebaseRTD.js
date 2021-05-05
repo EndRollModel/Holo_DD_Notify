@@ -30,7 +30,11 @@ if (process.env.PROJECT_ID !== undefined) {
 const db = admin.database();
 const ref = db.ref('userData');
 
+const fireData = {};
+fireData.notifyData = {};
+
 /**
+ * @deprecated
  * searchUser info
  * @description
  * if search user is fail return ''
@@ -48,6 +52,58 @@ function searchUser(userId) {
         });
     });
 }
+
+/**
+ * searchUser info
+ * @param userId
+ * @return {string|*}
+ */
+function searchLocalUser(userId) {
+    return new Promise((resolve, reject) => {
+        if (Object.keys(fireData.notifyData).some(e => e === userId)) {
+            resolve(fireData.notifyData[userId])
+        } else {
+            resolve('');
+        }
+    })
+}
+
+
+/**
+ * app start get once firebase data
+ */
+function getFirstData() {
+    return new Promise((resolve, reject) => {
+        ref.once('value', (snap) => {
+            if (snap.val() !== null) {
+                fireData.notifyData = snap.val();
+                console.log(':::::: get Firebase data Success :::::')
+                resolve({'status': 'success'})
+            } else {
+                console.log(':::::: get Firebase data Fail :::::')
+                resolve({'status': 'fail'})
+            }
+        });
+    });
+}
+
+/**
+ * start app then get once firebase
+ */
+function startListenFireBase() {
+    const listenRef = db.ref();
+    listenRef.on('child_changed', function (snap) {
+        fireData.notifyData = snap.val();
+    });
+}
+
+/**
+ * @return {{}}
+ */
+function getNotifyData() {
+    return fireData.notifyData;
+}
+
 
 /**
  * @deprecated
@@ -104,7 +160,7 @@ function updateUserInfo(userId, info) {
 function addNewUser(usertId, userId, displayName, token) {
     return new Promise((resolve, reject) => {
         const sub = [];
-        config.headPicList.map((elem)=>{
+        config.headPicList.map((elem) => {
             sub.push(elem.username);
         });
         ref.child(`${usertId}`).set({
@@ -125,6 +181,7 @@ function addNewUser(usertId, userId, displayName, token) {
 }
 
 /**
+ * @deprecated
  * searchAll user sub
  * @param {String} tagName
  * @return {Promise<Array>}
@@ -148,6 +205,29 @@ function searchSubItem(tagName) {
         });
     });
 }
+
+/**
+ * search local user data
+ * @return {object}
+ */
+function searchLocalSubItem(tagName) {
+    return new Promise((resolve, reject) => {
+        const filter = [];
+        Object.keys(fireData.notifyData).map((elem) => {
+            fireData.notifyData[elem].sub.filter((item) => {
+                if (item === tagName) {
+                    filter.push({
+                        token: fireData.notifyData[elem].token,
+                        mute: fireData.notifyData[elem].mute ? fireData.notifyData[elem].mute : 'true',
+                        showUrl: fireData.notifyData[elem].showUrl ? fireData.notifyData[elem].showUrl : 'false',
+                    });
+                }
+            });
+        });
+        resolve(filter);
+    })
+}
+
 
 /**
  * revoke user binding & remove firebase DATA
@@ -177,10 +257,15 @@ function revokeUserBind(userId) {
 
 module.exports = {
     searchUser,
+    searchLocalUser,
     addNewUser,
     updateUserSub,
     updateUserInfo,
     searchSubItem,
+    searchLocalSubItem,
     revokeUserBind,
+    getFirstData,
+    getNotifyData,
+    startListenFireBase,
 };
 

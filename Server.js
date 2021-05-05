@@ -8,12 +8,18 @@ const lineRouter = require('./router/Line');
 const apiRouter = require('./router/Api');
 const selectRouter = require('./router/SelectSub');
 const liffIdRouter = require('./router/Liffid');
+const fireDatabase = require('./controller/FirebaseRTD');
 const hostPath = process.env.hostpath;
 const app = express();
 app.use(bodyParser.urlencoded({extended: false}));
 
-// start filter
-tweetStream.streamFConnect(0);
+(async ()=>{
+    // getFirebaseData
+    await fireDatabase.getFirstData();
+    fireDatabase.startListenFireBase();
+    // start filter
+    tweetStream.streamFConnect(0);
+})()
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -35,5 +41,5 @@ app.get(`${hostPath||''}/`, (req, res) => {
 // listen port def 3000
 const server = app.listen(process.env.PORT || process.env.pport || 3000, () => {
     const port = server.address().port;
-    console.log('connect port : ', port);
+    console.log(`::::: connect port : ${port} :::::`);
 });

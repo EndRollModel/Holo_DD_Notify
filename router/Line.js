@@ -53,7 +53,8 @@ async function postbackEvent(event) {
     try {
         const data = JSON.parse(event.postback.data);
         const userId = crypto.encryptionAes(event.source.userId).replace(/[\/+]/g, '').trim();
-        const checkAccount = await fireDatabase.searchUser(userId);
+        // const checkAccount = await fireDatabase.searchUser(userId);
+        const checkAccount = await fireDatabase.searchLocalUser(userId);
         switch (data.action) {
         case 'revoke':
             if (checkAccount !== '') {

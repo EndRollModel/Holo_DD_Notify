@@ -4,7 +4,6 @@ const connect = require('../model/Connect');
 const express = require('express');
 const bodyParse = require('body-parser');
 const crypto = require('../model/Crypto');
-const fireDataBase = require('../controller/FirebaseRTD');
 const jsonParse = bodyParse.json();
 const router = new express.Router();
 
@@ -30,7 +29,8 @@ router.post('/search-user', jsonParse, async (req, res) => {
     if (req.body.id && req.body.displayName) {
         const fullUrl = 'https://' + req.get('host') + (req.originalUrl).replace('/search-user', '');
         const usertId = crypto.encryptionAes(req.body.id).replace(/[\/+]/g, '').trim();
-        const checkId = await fireDataBase.searchUser(usertId);
+        // const checkId = await fireDatabase.searchUser(usertId);
+        const checkId = await fireDatabase.searchLocalUser(usertId);
         if (checkId === '') {
             const username = encodeURI(req.body.displayName);
             const url = `https://notify-bot.line.me/oauth/authorize?response_type=code&client_id=${process.env.notify_client_id}&redirect_uri=${fullUrl}&scope=notify&state=${usertId}@${username}&response_mode=form_post`;

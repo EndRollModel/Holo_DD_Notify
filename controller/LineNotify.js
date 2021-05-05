@@ -57,7 +57,7 @@ function sendNotifyMessage(token, body) {
         .then((res) => res.json())
         .then((json) => {
             if (json.status !== 200) {
-                console.log(`User token : ${token} , status : ${JSON.stringify(json)}`);
+                console.log(`::::: User token : ${token} , status : ${JSON.stringify(json)} :::::`);
             }
         });
 }
