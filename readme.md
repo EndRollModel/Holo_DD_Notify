@@ -4,8 +4,8 @@
 <h5> <s> I Eng is so bad / 內容破英文注意!</s></h5>
 
 <h4>＊ 注意 ＊ 目前為測試階段 </h4>
-#
-本Project為 接收Hololive成員的推 轉送至LineNotify
+#       
+本Project為 接收Hololive成員的推 轉送至LineNotify      
 
 你可以在第一時間於Line上接收到你所訂閱的對象的通知 而不用開啟推特觀看
 # 

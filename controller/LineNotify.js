@@ -14,7 +14,7 @@ function formatMessage(userData, data) {
         // 純文字訊息
         const param = new URLSearchParams();
         if (userData.showUrl === 'true') {
-            param.append('message', `\n〖${data.name}〗：\n${data.text}\n《 https://twitter.com/hololive/status/${data.tweetsId} 》` );
+            param.append('message', `\n〖${data.name}〗：\n${data.text}\n《 https://twitter.com/hololive/status/${data.tweetsId} 》`);
         } else {
             param.append('message', `\n〖${data.name}〗：\n${data.text}`);
         }
@@ -25,7 +25,7 @@ function formatMessage(userData, data) {
         data.image.forEach((elem) => {
             const param = new URLSearchParams();
             if (userData.showUrl === 'true') {
-                param.append('message', `\n〖${data.name}〗：\n${data.text}\n《 https://twitter.com/hololive/status/${data.tweetsId} 》` );
+                param.append('message', `\n〖${data.name}〗：\n${data.text}\n《 https://twitter.com/hololive/status/${data.tweetsId} 》`);
             } else {
                 param.append('message', `\n〖${data.name}〗：\n${data.text}`);
             }
@@ -59,7 +59,10 @@ function sendNotifyMessage(token, body) {
             if (json.status !== 200) {
                 console.log(`::::: User token : ${token} , status : ${JSON.stringify(json)} :::::`);
             }
-        });
+        }).catch((e) => {
+        console.log(e)
+        console.log(JSON.stringify(body));
+    });
 }
 
 /**
@@ -79,15 +82,18 @@ function sendServerStatus(message) {
             },
             body: param,
         })
-            .then((res)=>res.json())
-            .then((json)=>{
-                if(json.status !== 200){
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.status !== 200) {
                     console.log(`notify send fail : ${JSON.stringify(json)}`);
                     resolve(false);
-                }else {
+                } else {
                     resolve(true);
                 }
-            })
+            }).catch((e) => {
+            console.log(e)
+            console.log(param.toString());
+        })
     })
 }
 
