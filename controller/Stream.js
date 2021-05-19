@@ -179,17 +179,22 @@ function streamConnect(retryAttempt) {
 /**
  * Filter stream ( axios ver. )
  * @param {number} count
+ * @description
+ * 斷線機制如下 :
+ * 如果為timeout 固定設定分鐘數重新連線
+ * 如果為maximum 通常是推特尚未清除上一條異常連線 重新能連線時間不固定
+ * 故第一次連線若失敗 則追加一次時間 直到15分鐘內（推特清除連線時間為15分鐘一次間隔）
  */
 function streamFConnect(count) {
-    // 連線計算方式 count * (5 * 60000)
-    // 每次進圈增加五分鐘 最高count : 3 (15min)
+    // 連線計算方式 count * (3 * 60 * 1000)
+    // 每次進圈增加五分鐘 最高count : 5 (15min)
     // 第一圈進來為 0 將以五分鐘作為最低標準
-    const reconnectTime = count === 0 ? (5 * 60000) : count * (5 * 60000);
+    const reconnectTime = count === 0 ? (3 * 60 * 1000) : count * (3 * 60 * 1000);
     notify.sendServerStatus('::::: start request :::::').then(() => {
         console.log('start request to twitter');
     });
     // check server still alive info
-    const checkTime = 25000;
+    const checkTime = 40 * 1000;
     let delayMessage = setTimeout(() => {
         console.log(`I'm dead !`);
     }, checkTime);
@@ -205,7 +210,7 @@ function streamFConnect(count) {
             'User-Agent': 'v2FilterStreamJS',
             'Authorization': token,
         },
-        timeout: 20000,
+        timeout: checkTime,
         responseType: 'stream',
     }).then(function (res) {
         console.log(JSON.stringify(res.headers)); // this req header information
@@ -225,7 +230,8 @@ function streamFConnect(count) {
                 console.log(JSON.stringify(json));
             } catch (e) {
                 // Keep alive signal received. Do nothing.
-                // if 25 sec not call \r\n = dead (official doc : 20 sec)
+                // if 40 sec not call \r\n = dead (official doc : 20 sec)
+                // https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/consuming-streaming-data
                 clearTimeout(delayMessage);
                 delayMessage = setTimeout(() => {
                     notify.sendServerStatus(`::::: Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec. :::::`).then((status) => {
@@ -247,7 +253,7 @@ function streamFConnect(count) {
                     notify.sendServerStatus(`::::: Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec. :::::`).then(() => {
                         source.cancel('maximum');
                         console.log(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`);
-                        if (count < 3) {
+                        if (count < 5) {
                             setTimeout(() => {
                                 streamFConnect(++count);
                             }, reconnectTime);
