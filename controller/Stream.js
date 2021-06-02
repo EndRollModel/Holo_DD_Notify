@@ -9,6 +9,7 @@ const {writeAliveLog} = require('../model/Log');
 const rulesUrl = `https://api.twitter.com/2/tweets/search/stream/rules`;
 const sampleUrl = `https://api.twitter.com/2/tweets/sample/stream?expansions=attachments.media_keys,author_id&media.fields=url&tweet.fields=entities`;
 const filterUrl = `https://api.twitter.com/2/tweets/search/stream?expansions=attachments.media_keys,author_id&media.fields=url&tweet.fields=entities`;
+// const filterUrl = `https://api.twitter.com/2/tweets/search/stream?expansions=attachments.media_keys,author_id&media.fields=url&tweet.fields=entities&user.fields=profile_image_url`;
 const notify = require('../controller/LineNotify');
 
 /**
@@ -179,22 +180,32 @@ function streamConnect(retryAttempt) {
 /**
  * Filter stream ( axios ver. )
  * @param {number} count
+ * @param {number} limit
  * @description
  * 斷線機制如下 :
  * 如果為timeout 固定設定分鐘數重新連線
  * 如果為maximum 通常是推特尚未清除上一條異常連線 重新能連線時間不固定
  * 故第一次連線若失敗 則追加一次時間 直到15分鐘內（推特清除連線時間為15分鐘一次間隔）
  */
-function streamFConnect(count) {
-    // 連線計算方式 count * (3 * 60 * 1000)
-    // 每次進圈增加五分鐘 最高count : 5 (15min)
+function streamFConnect(count, limit = 50) {
+    // 連線計算方式 count * (60 * 1000)
+    // 每次進圈增加一分鐘 最高count : 10 (10min)
     // 第一圈進來為 0 將以五分鐘作為最低標準
-    const reconnectTime = count === 0 ? (3 * 60 * 1000) : count * (3 * 60 * 1000);
-    notify.sendServerStatus('::::: start request :::::').then(() => {
-        console.log('start request to twitter');
-    });
+    const reconnectTime = count === 0 ? (60 * 1000) : count * (60 * 1000);
+    // notify.sendServerStatus('::::: start request :::::').then(() => {
+        console.log('::::: start request twitter :::::');
+    // });
+
+
+    // 2021/5 twitter 5min will connect disconnect loop
+    // https://twittercommunity.com/t/filtered-stream-request-breaks-in-5-min-intervals/153926/
+    // 遞減增加秒數 0 > 5 > 10 > 20 > 40
+    let limitDef;
+    let limitCount = limit === 50 ? 1 : limit === 0 ? -1 : Math.floor((50 - limit) / 10 );
+    const timeoutRecTime = (limitCount === 0) ? (5 * 1000) : limitCount === -1 ? (15 * 60 * 1000) : limitCount * 2 * (5 * 1000);
+
     // check server still alive info
-    const checkTime = 40 * 1000;
+    const checkTime = 25 * 1000;
     let delayMessage = setTimeout(() => {
         console.log(`I'm dead !`);
     }, checkTime);
@@ -215,6 +226,7 @@ function streamFConnect(count) {
     }).then(function (res) {
         console.log(JSON.stringify(res.headers)); // this req header information
         console.log(res.status);
+        limitDef = res.headers['x-rate-limit-remaining'];
         res.data.on('data', async (data) => {
             // const messageData = Buffer.from(data).toString('utf-8');
             try {
@@ -234,13 +246,13 @@ function streamFConnect(count) {
                 // https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/consuming-streaming-data
                 clearTimeout(delayMessage);
                 delayMessage = setTimeout(() => {
-                    notify.sendServerStatus(`::::: Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec. :::::`).then((status) => {
-                        console.log(`Server stop : 'timeout', reconnect time : ${reconnectTime / 1000} sec.`);
+                    // notify.sendServerStatus(`::::: Server stop : 'timeout', reconnect time : ${timeoutRecTime / 1000} sec. :::::`).then((status) => {
+                        console.log(`Server stop : 'timeout', reconnect time : ${timeoutRecTime / 1000} sec.`);
                         source.cancel('timeout');
                         setTimeout(() => {
-                            streamFConnect(0);
-                        }, reconnectTime);
-                    });
+                            streamFConnect(0, limitDef);
+                        }, timeoutRecTime);
+                    // });
                 }, checkTime);
                 writeAliveLog(`I'm still alive`);
             }
@@ -252,14 +264,14 @@ function streamFConnect(count) {
                     // `Server Stop Message : This stream is currently at the maximum allowed connection limit.`
                     notify.sendServerStatus(`::::: Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec. :::::`).then(() => {
                         source.cancel('maximum');
-                        console.log(`Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec.`);
-                        if (count < 5) {
+                        console.log(`::::: Server stop : 'maximum', reconnect time ${reconnectTime / 1000} sec. :::::`);
+                        if (count < 10) {
                             setTimeout(() => {
-                                streamFConnect(++count);
+                                streamFConnect(++count, limitDef);
                             }, reconnectTime);
                         } else {
                             setTimeout(() => {
-                                streamFConnect(count);
+                                streamFConnect(count, limitDef);
                             }, reconnectTime);
                         }
                     });
@@ -272,7 +284,7 @@ function streamFConnect(count) {
                             console.log(`Server stop : 'other', reconnect time : ${reconnectTime / 1000} sec.`);
                             source.cancel('other');
                             setTimeout(() => {
-                                streamFConnect(0);
+                                streamFConnect(0, limitDef);
                             }, reconnectTime);
                         });
                     });

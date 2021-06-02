@@ -73,6 +73,7 @@ function sendNotifyMessage(token, body) {
 function sendServerStatus(message) {
     const param = new URLSearchParams();
     param.append('message', message);
+    param.append('notificationDisabled', 'true');
     return new Promise((resolve, reject) => {
         fetch(notifyUrl, {
             method: 'post',

@@ -77,10 +77,10 @@ function getFirstData() {
         ref.once('value', (snap) => {
             if (snap.val() !== null) {
                 fireData.notifyData = snap.val();
-                console.log(':::::: get Firebase data Success :::::')
+                console.log('::::: get Firebase data Success :::::')
                 resolve({'status': 'success'})
             } else {
-                console.log(':::::: get Firebase data Fail :::::')
+                console.log('::::: get Firebase data Fail :::::')
                 resolve({'status': 'fail'})
             }
         });
