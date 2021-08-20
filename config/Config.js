@@ -42,12 +42,28 @@ const headPicList = [
     {name: '桃鈴ねね', username: 'momosuzunene'},
     {name: '獅白ぼたん', username: 'shishirobotan'},
     {name: '尾丸ポルカ', username: 'omarupolka'},
-    // En組
+    // Id 一期
+    {name: 'Airani Iofifteen', username: 'airaniiofifteen'},
+    {name: 'Moona Hoshinova', username: 'moonahoshinova'},
+    {name: 'Ayunda Risu', username: 'ayunda_risu'},
+    // En 一期
     {name: 'Mori Calliope', username: 'moricalliope'},
     {name: 'Takanashi Kiara', username: 'takanashikiara'},
     {name: 'Ninomae Ina nis', username: 'ninomaeinanis'},
     {name: 'Gawr Gura', username: 'gawrgura'},
     {name: 'Amelia Watson', username: 'watsonameliaEN'},
+    // Id 二期
+    {name: 'Kureiji Ollie', username: 'kureijiollie'},
+    {name: 'Anya Melfissa', username: 'anyamelfissa'},
+    {name: 'Pavolia Reine', username: 'pavoliareine'},
+    // En : Hope
+    {name: 'IRyS', username: 'irys_en'},
+    // En 2期 : Council
+    {name: '九十九佐命', username: 'tsukumosana'},
+    {name: 'セレス・ファウナ', username: 'ceresfauna'},
+    {name: 'オーロ・クロニー', username: 'ourokronii'},
+    {name: '七詩ムメイ', username: 'nanashimumei_en'},
+    {name: 'ハコス・ベールズ', username: 'hakosbaelz'},
 ];
 
 module.exports = {

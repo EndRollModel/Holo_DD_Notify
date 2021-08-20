@@ -190,18 +190,20 @@ function streamConnect(retryAttempt) {
 function streamFConnect(count, limit = 50) {
     // 連線計算方式 count * (60 * 1000)
     // 每次進圈增加一分鐘 最高count : 10 (10min)
-    // 第一圈進來為 0 將以五分鐘作為最低標準
+    // 第一圈進來為 0 將以一分鐘作為最低標準
     const reconnectTime = count === 0 ? (60 * 1000) : count * (60 * 1000);
     // notify.sendServerStatus('::::: start request :::::').then(() => {
         console.log('::::: start request twitter :::::');
     // });
 
-
-    // 2021/5 twitter 5min will connect disconnect loop
+    // 2021/5 twitter 5min will disconnect loop
     // https://twittercommunity.com/t/filtered-stream-request-breaks-in-5-min-intervals/153926/
-    // 遞減增加秒數 0 > 5 > 10 > 20 > 40
+    // 遞減增加秒數 0 > 10 * 9 > 20 * 9  > 30 * 9 > 40 * 9
     let limitDef;
+    // header次數是否剩餘50 若是limitcount為1 若header剩餘次數為0則為-1 若次數少於50並大於0時 則為(50-次數/10的整數)ˋex: 49-40為4
     let limitCount = limit === 50 ? 1 : limit === 0 ? -1 : Math.floor((50 - limit) / 10 );
+    // 計算剩餘次數連線所需秒數 如果剩餘次數為50次 則五秒重新連線 若已經為0次則等待15分鐘 若為0次以上50次以下則為 前者次數 * 2 * 5秒的時間
+    // (50-41:0 0秒; 40-31:1 10秒; 30:21:2 20秒; 20:11:3 30秒; 10:1:4; 40秒; 0:15分鐘) 合計1000秒 超過15分鐘(900秒)
     const timeoutRecTime = (limitCount === 0) ? (5 * 1000) : limitCount === -1 ? (15 * 60 * 1000) : limitCount * 2 * (5 * 1000);
 
     // check server still alive info
@@ -225,7 +227,7 @@ function streamFConnect(count, limit = 50) {
         responseType: 'stream',
     }).then(function (res) {
         console.log(JSON.stringify(res.headers)); // this req header information
-        console.log(res.status);
+        // console.log(res.status);
         limitDef = res.headers['x-rate-limit-remaining'];
         res.data.on('data', async (data) => {
             // const messageData = Buffer.from(data).toString('utf-8');
@@ -242,7 +244,7 @@ function streamFConnect(count, limit = 50) {
                 console.log(JSON.stringify(json));
             } catch (e) {
                 // Keep alive signal received. Do nothing.
-                // if 40 sec not call \r\n = dead (official doc : 20 sec)
+                // if 25 sec not call \r\n = dead (official doc : 20 sec)
                 // https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/consuming-streaming-data
                 clearTimeout(delayMessage);
                 delayMessage = setTimeout(() => {
@@ -292,7 +294,11 @@ function streamFConnect(count, limit = 50) {
                 // console.log(err.response.status);
                 // console.log(err.response.headers);
             } else {
-                console.log(`axios no response : ${err.toString()}`)
+                console.log(`::::: Server stop : 'axios no response', message : ${err.toString()}, reconnect time : ${reconnectTime / 1000} sec. :::::`);
+                source.cancel('axios no response')
+                setTimeout(() => {
+                    streamFConnect(0, limitDef);
+                }, reconnectTime);
             }
         }
     ).then(() => {

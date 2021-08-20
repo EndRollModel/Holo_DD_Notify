@@ -117,6 +117,11 @@ async function postbackEvent(event) {
  */
 async function textMessageEvent(event) {
     switch (event.message.text) {
+        case '#功能選單':
+        case '#menu':
+            return await followEvent(event)
+        default:
+            break;
     }
 }
 
