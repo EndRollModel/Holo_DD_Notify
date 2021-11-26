@@ -64,6 +64,12 @@ const headPicList = [
     {name: 'オーロ・クロニー', username: 'ourokronii'},
     {name: '七詩ムメイ', username: 'nanashimumei_en'},
     {name: 'ハコス・ベールズ', username: 'hakosbaelz'},
+    // jp 6期 : HololiveX
+    {name: 'ラプラス・ダークネス', username: 'LaplusDarknesss'},
+    {name: '鷹嶺ルイ', username: 'takanelui'},
+    {name: '博衣こより', username: 'hakuikoyori'},
+    {name: '沙花叉クロヱ', username: 'sakamatachloe'},
+    {name: '風真いろは', username: 'kazamairohach'},
 ];
 
 module.exports = {

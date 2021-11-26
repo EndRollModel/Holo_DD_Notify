@@ -35,13 +35,13 @@ channelSecret= line message api token
 // crypto
 aeskey= you custom aeskey (32char)
 aesiv= you custom aesiv (16char)
-// firebase {option} | if you want use firebase-admin.json . you can rename 'admin.json' 
+// firebase {option} | if you want use firebase-admin.json . you can rename 'admin.json' in this project root path
 DATABASE_URL= firebase database url
 PROJECT_ID= firebase admin project_id
 PRIVATE_KEY= firebase admin private_key
 CLIENT_EMAIL= firebase admin client_email
 // other
-hostpath= {option} | if you have path (ex: https://www.google.com/'1234') you need write '/1234' in here
+hostpath= {option} | if you have path (ex: https://www.google.com/'1234') you need write '/1234' in here or not write any thing
 // liff
 liff_bind= liff bind page id 
 liff_select= liff select page id
