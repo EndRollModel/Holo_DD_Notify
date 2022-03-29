@@ -70,6 +70,10 @@ const headPicList = [
     {name: '博衣こより', username: 'hakuikoyori'},
     {name: '沙花叉クロヱ', username: 'sakamatachloe'},
     {name: '風真いろは', username: 'kazamairohach'},
+    // Id 三期
+    {name: 'Vestia Zeta', username: 'vestiazeta'},
+    {name: 'Kaela Kovalskia', username: 'kaelakovalskia'},
+    {name: 'Kobo Kanaeru', username: 'kobokanaeru'},
 ];
 
 module.exports = {
