@@ -1,5 +1,5 @@
 process.chdir(__dirname);
-const fetch = require('node-fetch');
+const axios = require('axios');
 const {URLSearchParams} = require('url');
 const notifyUrl = 'https://notify-api.line.me/api/notify';
 
@@ -46,23 +46,19 @@ function formatMessage(userData, data) {
  * @param {object} body
  */
 function sendNotifyMessage(token, body) {
-    fetch(notifyUrl, {
-        method: 'post',
+    axios.post(notifyUrl, body.toString(), {
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Bearer ${token}`,
-        },
-        body: body,
+            'Authorization': `Bearer ${token}`
+        }
     })
-        .then((res) => res.json())
-        .then((json) => {
-            if (json.status !== 200) {
-                console.log(`::::: User token : ${token} , status : ${JSON.stringify(json)} :::::`);
+        .then((res) => {
+            const data = res.data;
+            if (data.status !== 200) {
+                console.log(`::::: User token : ${token} , status : ${JSON.stringify(res)} :::::`);
             }
         }).catch((e) => {
         console.log(e)
-        console.log(JSON.stringify(body));
-    });
+    })
 }
 
 /**
@@ -75,25 +71,20 @@ function sendServerStatus(message) {
     param.append('message', message);
     param.append('notificationDisabled', 'true');
     return new Promise((resolve, reject) => {
-        fetch(notifyUrl, {
-            method: 'post',
+        axios.post(notifyUrl, param.toString(), {
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
                 'Authorization': `Bearer ${process.env.server_notify_token}`,
-            },
-            body: param,
-        })
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.status !== 200) {
-                    console.log(`notify send fail : ${JSON.stringify(json)}`);
-                    resolve(false);
-                } else {
-                    resolve(true);
-                }
-            }).catch((e) => {
+            }
+        }).then((res) => {
+            const data = res.data;
+            if (res.status !== 200) {
+                console.log(`notify send fail : ${JSON.stringify(data)}`);
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        }).catch((e) => {
             console.log(e)
-            console.log(param.toString());
         })
     })
 }
