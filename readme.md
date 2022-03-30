@@ -49,3 +49,5 @@ liff_select= liff select page id
 // server status
 server_notify_token= notify token for server status
 ```
+
+本專案所使用Hololive頭像 版權皆為Cover與Hololive所有 如有侵權請告知 感謝 
