@@ -1,3 +1,11 @@
+Hi, this project used the Twitter API.
+
+However, Musk has changed the pricing plan.
+
+I can't afford to pay $5000 every month, so this project is no longer functional.
+
+Therefore, I have decided to stop maintaining this project.
+
 #
 本專案利用Twitter api 去撈取HoloLive成員發送的推 
 
